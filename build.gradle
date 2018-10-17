@@ -8,7 +8,6 @@ repositories {
 
 dependencies {
     compile group: 'org.scala-lang', name: 'scala-library', version: '2.13.0-M5'
-    // https://mvnrepository.com/artifact/org.scala-lang.modules/scala-parallel-collections
     compile group: 'org.scala-lang.modules', name: 'scala-parallel-collections_2.13.0-M2', version: '1.0.2'
 
 }
