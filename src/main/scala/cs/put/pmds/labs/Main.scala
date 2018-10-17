@@ -19,8 +19,19 @@ case class Hotel(id: Int)
 
 case class NightInTheHotel(
 	person: Person,
+	night: Night
+)
+
+case class Night(
 	hotel: Hotel,
 	day: Int
+)
+
+case class NightlyPair(
+	p1: Person,
+	p2: Person,
+	n1: Night,
+	n2: Night
 )
 
 object CmdArgsSupplier extends ProblemArgsSupplier {
@@ -49,7 +60,7 @@ class NightsCreator(private val supplier: ProblemArgsSupplier) {
 	private def getPersonNights(person: Person): Array[NightInTheHotel] = {
 		val random = ThreadLocalRandom.current()
 		days.withFilter(_ => random.nextDouble() <= programArgs.probabilityOfSleepingInHotel)
-		 .map(d => NightInTheHotel(person, hotels(random.nextInt(hotels.length - 1)), d))
+		 .map(d => NightInTheHotel(person, Night(hotels(random.nextInt(hotels.length - 1)), d)))
 	}
 
 	private val programArgs = supplier.produce()
@@ -59,25 +70,59 @@ class NightsCreator(private val supplier: ProblemArgsSupplier) {
 	val nights: Array[NightInTheHotel] = persons.flatMap(getPersonNights _)
 }
 
-class NightsMatcher(private val nights: Array[NightInTheHotel]) {
-	private def isPairInTheSameNightAndHotel(p: (NightInTheHotel, NightInTheHotel)) = {
-		p._1.person != p._2.person &&
-		 p._1.day == p._2.day &&
-		 p._1.hotel == p._2.hotel
+object Util {
+
+	implicit class Col[T](obj: Array[T]) {
+		def cross(): Array[(T, T)] = {
+			obj
+			 .map(o1 => obj.map(o2 => (o1, o2)))
+			 .flatten
+			 .filter(p => p._1 != p._2)
+		}
 	}
 
-	def findNightlyPairs() = {
+}
+
+class TerroristFinder(private val nights: Array[NightInTheHotel]) {
+
+	import Util._
+
+	private def isPairInTheSameNightAndHotel(p: (NightInTheHotel, NightInTheHotel)) = {
+		p._1.person != p._2.person && p._1.night == p._2.night
+	}
+
+	def find() = {
 		LazyList.from(nights)
 		 .flatMap(n1 => LazyList.from(nights).map(n2 => (n1, n2)))
 		 .filter(isPairInTheSameNightAndHotel)
-		 .groupBy(p => (p._1.person, p._2.person))
-		 .filter { case (_, v) => v.length > 1 }
-		 .keys
+		 .groupBy(pair)
+		 .view
+		 .mapValues(distinctNights)
+		 .filter(p => p._2.length > 1)
+		 .map(extractNightsPairs)
+		 .toArray
+	}
+
+	private def extractNightsPairs(p: ((Person, Person), Array[Night])) = {
+		(p._1, p._2.cross().distinctBy(n => Set(n._1, n._2)))
+	}
+
+	private def distinctNights(v: LazyList[(NightInTheHotel, NightInTheHotel)]) = {
+		v.map(_._1.night).distinct.toArray
+	}
+
+	private def pair(p: (NightInTheHotel, NightInTheHotel)): (Person, Person) = {
+		val p1 = p._1.person
+		val p2 = p._2.person
+		if (p1.id < p2.id) (p1, p2) else (p2, p1)
 	}
 }
 
 object Main extends App {
 	private val nights = new NightsCreator(ProvidedArgsSupplier).nights
-	private val value = new NightsMatcher(nights).findNightlyPairs()
-	println(value)
+	private val terrorists = new TerroristFinder(nights).find()
+	println(s"number of pairs: ${terrorists.length}")
+	private val nightPairs = terrorists.map(p => p._2.map(n => NightlyPair(p._1._1, p._1._2, n._1, n._2))).flatten
+	println(s"number of all pairs combinations: ${nightPairs.length}")
+
 }
