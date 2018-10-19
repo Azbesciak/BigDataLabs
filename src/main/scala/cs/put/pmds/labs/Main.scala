@@ -2,6 +2,8 @@ package cs.put.pmds.labs
 
 import java.util.concurrent.ThreadLocalRandom
 
+import plotly.Histogram
+
 import scala.io.StdIn
 
 case class ProgramArgs(
@@ -56,6 +58,14 @@ trait ProblemArgsSupplier {
 	def produce(): ProgramArgs
 }
 
+case class TerroristsPairs(
+	t1: Person,
+	t2: Person,
+	meetings: Array[Night]
+) {
+	override def toString: String = s"TerroristPairs($t1, $t2, ${meetings.mkString("[",",", "]")}"
+}
+
 class NightsCreator(private val supplier: ProblemArgsSupplier) {
 	private def getPersonNights(person: Person): Array[NightInTheHotel] = {
 		val random = ThreadLocalRandom.current()
@@ -71,7 +81,6 @@ class NightsCreator(private val supplier: ProblemArgsSupplier) {
 }
 
 object Util {
-
 	implicit class Col[T](obj: Array[T]) {
 		def cross(): Array[(T, T)] = {
 			obj
@@ -80,7 +89,6 @@ object Util {
 			 .filter(p => p._1 != p._2)
 		}
 	}
-
 }
 
 class TerroristFinder(private val nights: Array[NightInTheHotel]) {
@@ -91,7 +99,11 @@ class TerroristFinder(private val nights: Array[NightInTheHotel]) {
 		p._1.person != p._2.person && p._1.night == p._2.night
 	}
 
-	def find() = {
+	def getTerroristsNightsPairs(pairNights: Array[TerroristsPairs]) = {
+		pairNights.flatMap(extractNightsPairs)
+	}
+
+	def getPairNights() = {
 		LazyList.from(nights)
 		 .flatMap(n1 => LazyList.from(nights).map(n2 => (n1, n2)))
 		 .filter(isPairInTheSameNightAndHotel)
@@ -99,12 +111,14 @@ class TerroristFinder(private val nights: Array[NightInTheHotel]) {
 		 .view
 		 .mapValues(distinctNights)
 		 .filter(p => p._2.length > 1)
-		 .map(extractNightsPairs)
 		 .toArray
+		 .map(p => TerroristsPairs(p._1._1, p._1._2, p._2))
 	}
 
-	private def extractNightsPairs(p: ((Person, Person), Array[Night])) = {
-		(p._1, p._2.cross().distinctBy(n => Set(n._1, n._2)))
+	private def extractNightsPairs(p: TerroristsPairs) = {
+		p.meetings.cross()
+		 .distinctBy(n => Set(n._1, n._2))
+		 .map(n => NightlyPair(p.t1, p.t2, n._1, n._2))
 	}
 
 	private def distinctNights(v: LazyList[(NightInTheHotel, NightInTheHotel)]) = {
@@ -118,11 +132,22 @@ class TerroristFinder(private val nights: Array[NightInTheHotel]) {
 	}
 }
 
-object Main extends App {
-	private val nights = new NightsCreator(ProvidedArgsSupplier).nights
-	private val terrorists = new TerroristFinder(nights).find()
-	println(s"number of pairs: ${terrorists.length}")
-	private val nightPairs = terrorists.map(p => p._2.map(n => NightlyPair(p._1._1, p._1._2, n._1, n._2))).flatten
-	println(s"number of all pairs combinations: ${nightPairs.length}")
+class HistogramMaker(private val pairs: Array[TerroristsPairs]) {
 
+	import plotly._, element._, layout._, Plotly._
+
+	def make(): Unit = {
+		val results = pairs.groupBy(_.meetings.length).view.mapValues(_.length).toArray
+		Histogram(results.map(_._1).toSeq, results.map(_._2).toSeq).plot()
+	}
+}
+
+object Main extends App {
+
+	private val finder = new TerroristFinder(new NightsCreator(ProvidedArgsSupplier).nights)
+	private val terrorists = finder.getPairNights()
+	println(s"number of all potential pairs: ${terrorists.length}")
+	private val nightsByPair = finder.getTerroristsNightsPairs(terrorists)
+	println(s"number of terrorist pairs and nights pairs (persono-night-pair): ${nightsByPair.length}")
+	private val maker = new HistogramMaker(terrorists)
 }
