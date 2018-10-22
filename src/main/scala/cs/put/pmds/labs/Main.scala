@@ -92,13 +92,13 @@ object Util {
 }
 
 class TerroristFinder(private val nights: Array[NightInTheHotel]) {
-	private def isPairInTheSameNightAndHotel(p: (NightInTheHotel, NightInTheHotel)) =
-		p._1.person != p._2.person && p._1.night == p._2.night
+	private def isPairInTheSameNightAndHotel(n1: NightInTheHotel, n2: NightInTheHotel) =
+		n1.person != n2.person && n1.night == n2.night
 
 	def getPairNights() = {
 		nights.toStream.par
 		 .flatMap(n1 => nights.toStream
-			.withFilter(n2 => isPairInTheSameNightAndHotel((n1, n2)))
+			.withFilter(n2 => isPairInTheSameNightAndHotel(n1, n2))
 			.map(n2 => (n1, n2))
 		 )
 		 .groupBy(pair)
