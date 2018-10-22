@@ -50,7 +50,7 @@ object CmdArgsSupplier extends ProblemArgsSupplier {
 }
 
 object ProvidedArgsSupplier extends ProblemArgsSupplier {
-	override def produce() = ProgramArgs(100, 0.1, 10, 100)
+	override def produce() = ProgramArgs(10000, 0.01, 100, 1000)
 }
 
 trait ProblemArgsSupplier {
@@ -66,8 +66,9 @@ case class TerroristsPairs(
 }
 
 class NightsCreator(private val programArgs: ProgramArgs) {
+	private val random = ThreadLocalRandom.current()
+
 	private def getPersonNights(person: Person): Array[NightInTheHotel] = {
-		val random = ThreadLocalRandom.current()
 		days.withFilter(_ => random.nextDouble() <= programArgs.probabilityOfSleepingInHotel)
 		 .map(d => NightInTheHotel(person, Night(hotels(random.nextInt(hotels.length - 1)), d)))
 	}
@@ -75,7 +76,7 @@ class NightsCreator(private val programArgs: ProgramArgs) {
 	private val persons = (1 to programArgs.numOfPersons).map(Person).toArray
 	private val hotels = (1 to programArgs.numOfHotels).map(Hotel).toArray
 	private val days = (1 to programArgs.numOfDays).toArray
-	val nights: Array[NightInTheHotel] = persons.flatMap(getPersonNights)
+	val nights: Array[NightInTheHotel] = persons.par.flatMap(getPersonNights).toArray
 }
 
 object Util {
@@ -96,11 +97,13 @@ class TerroristFinder(private val nights: Array[NightInTheHotel]) {
 
 	def getPairNights() = {
 		nights.toStream.par
-		 .flatMap(n1 => nights.toStream.map(n2 => (n1, n2)))
-		 .filter(isPairInTheSameNightAndHotel)
+		 .flatMap(n1 => nights.toStream
+			.withFilter(n2 => isPairInTheSameNightAndHotel((n1, n2)))
+			.map(n2 => (n1, n2))
+		 )
 		 .groupBy(pair)
 		 .mapValues(distinctNights)
-		 .filter(p => p._2.length > 1)
+		 .withFilter(p => p._2.length > 1)
 		 .map(p => TerroristsPairs(p._1._1, p._1._2, p._2))
 		 .toArray
 	}
@@ -168,7 +171,7 @@ class TerroristsStatisticMaker {
 		val mediumNumberOfTerrorists = stats.map(t => t._2 / iterations).sum
 		println(s"medium number of potential pairs: $mediumNumberOfTerrorists")
 		val personoNightPairsMediumNumber = personoNightsPairs / iterations
-		println(s"medium number of persono-night-pairs: ${personoNightPairsMediumNumber}")
+		println(s"medium number of persono-night-pairs: $personoNightPairsMediumNumber")
 		TerroristsStats(
 			stats.mapValues(_ / iterations).toArray,
 			mediumNumberOfTerrorists,
@@ -177,7 +180,7 @@ class TerroristsStatisticMaker {
 	}
 
 	def getTerroristsNightsPairs(pairNights: Array[TerroristsPairs]) =
-		pairNights.flatMap(extractNightsPairs)
+		pairNights.par.flatMap(extractNightsPairs).toArray
 
 	private def extractNightsPairs(p: TerroristsPairs) = {
 		p.meetings.cross()
