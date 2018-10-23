@@ -1,0 +1,22 @@
+number of all potential pairs: 30486
+number of terrorist pairs and nights pairs (persono-night-pair): 1515560
+number of all potential pairs: 23291
+number of terrorist pairs and nights pairs (persono-night-pair): 1126629
+number of all potential pairs: 14218
+number of terrorist pairs and nights pairs (persono-night-pair): 694546
+number of all potential pairs: 14397
+number of terrorist pairs and nights pairs (persono-night-pair): 722558
+number of all potential pairs: 12198
+number of terrorist pairs and nights pairs (persono-night-pair): 609797
+number of all potential pairs: 11094
+number of terrorist pairs and nights pairs (persono-night-pair): 547431
+number of all potential pairs: 12988
+number of terrorist pairs and nights pairs (persono-night-pair): 643974
+number of all potential pairs: 14410
+number of terrorist pairs and nights pairs (persono-night-pair): 709108
+number of all potential pairs: 13614
+number of terrorist pairs and nights pairs (persono-night-pair): 672614
+number of all potential pairs: 8160
+number of terrorist pairs and nights pairs (persono-night-pair): 402347
+medium number of potential pairs: 15485.599999999999
+medium number of persono-night-pairs: 764456.4
