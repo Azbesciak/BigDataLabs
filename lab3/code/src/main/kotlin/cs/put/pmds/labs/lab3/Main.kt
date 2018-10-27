@@ -1,5 +1,7 @@
 package cs.put.pmds.labs.lab3
 
+import kotlinx.coroutines.experimental.async
+import kotlinx.coroutines.experimental.runBlocking
 import java.io.File
 import java.sql.Connection
 import java.sql.DriverManager
@@ -18,13 +20,7 @@ object Sample {
         withDriver(args[0]) {
             initialize()
             initData(args)
-
-            execute("Select count(*) from $TRACKS_TABLE") {
-                println("tracks: ${getInt(1)}")
-            }
-            execute("Select count(*) from $LISTENINGS_TABLE") {
-                println("listenings: ${getInt(1)}")
-            }
+            mineData()
         }
     }
 
@@ -41,13 +37,14 @@ object Sample {
                 con.block()
             }
 
-    private inline fun Connection.execute(select: String, consumer: ResultSet.() -> Unit) {
-        prepareStatement(select).executeQuery().use {
-            while (it.next()) {
-                it.consumer()
+    private inline fun <T> Connection.execute(select: String, consumer: ResultSet.() -> T) =
+            prepareStatement(select).executeQuery().use {
+                val values = mutableListOf<T>()
+                while (it.next()) {
+                    values += it.consumer()
+                }
+                values
             }
-        }
-    }
 
     private fun Connection.insertFromFile(filePath: String, sql: String): Int {
         var counter = 0
@@ -100,4 +97,85 @@ object Sample {
     }
 
     private fun Connection.executeUpdate(sql: String) = prepareStatement(sql).executeUpdate()
+
+    private fun Connection.mineData() {
+        val time = measureTimeMillis {
+            createSongsIndex()
+            runBlocking {
+                arrayOf(
+                        async { tracksRanking() },
+                        async { usersRanking() },
+                        async { artistsRanking() },
+                        async { monthlyListenings() },
+                        async { queenMostPopularSongListeners() }
+                ).map { println(it.await()) }
+            }
+        }
+        println("total query time: $time")
+    }
+
+    private fun Connection.createSongsIndex() = createStatement()
+            .execute("create index songs on $LISTENINGS_TABLE(song_id);")
+
+    private fun Connection.tracksRanking() =
+            execute("""
+            select t.title, t.artist, r.listenings_cout as listenings_count
+            from (select count(*) as listenings_cout, song_id
+                  from listenings
+                  group by song_id
+                  order by count(*) desc
+                  limit 10) r
+                   join tracks t on r.song_id = t.song_id
+            order by listenings_count desc;
+        """) { serialize(3) }
+
+    private fun Connection.usersRanking() =
+            execute("""
+        select user_id, count(distinct song_id) as listenings_count
+        from listenings
+        group by user_id
+        order by count(distinct song_id) desc
+        limit 5;
+        """) { serialize(2) }
+
+    private fun Connection.artistsRanking() = execute("""
+    select t.artist, count(*)
+    from tracks t
+           join listenings l on l.song_id = t.song_id
+    group by t.artist
+    order by count(*) desc
+    limit 3;
+    """) {
+        serialize(2)
+    }
+
+    private fun Connection.monthlyListenings() =
+            execute("""
+        select month, count(*)
+        from (SELECT strftime('%m', datetime(listening_date, 'unixepoch')) as month FROM listenings)
+        group by month
+        order by month;
+        """) {
+                serialize(2)
+            }
+
+    private fun Connection.queenMostPopularSongListeners() =
+            execute("""
+           select distinct user_id from listenings l
+        where l.song_id in (
+          select q.song_id as sid
+          from (select song_id from tracks where artist = 'Queen') q
+                 join listenings l on l.song_id = q.song_id
+          group by q.song_id
+          order by count(*) desc
+          limit 3
+            )
+        order by user_id
+        limit 10
+        """) {
+                serialize(1)
+            }
+
+    private fun ResultSet.serialize(fields: Int) = (1..fields).joinToString(" ") { getString(it) }
+
 }
