@@ -1,5 +1,6 @@
 package cs.put.pmds.labs.lab3
 
+import com.carrotsearch.hppc.ObjectObjectHashMap
 import java.io.File
 import java.sql.Connection
 import java.sql.DriverManager
@@ -32,7 +33,7 @@ object Sample {
         println("insert time: ${time / 1000}s")
     }
 
-    private fun Connection.insertListenings(args: Array<String>, songs: Map<String, List<String>>) {
+    private fun Connection.insertListenings(args: Array<String>, songs: ObjectObjectHashMap<String, List<String>>) {
         beginRequest()
         prepareStatement("""
                     INSERT INTO $TRACK_LISTENINGS_TABLE
@@ -41,18 +42,18 @@ object Sample {
                 """).use { statement ->
             args[2].lines {
                 val values = it.split(SEPARATOR)
-                val insertArgs = songs[values[1]]!! + values
+                val insertArgs = songs[values[1]] + values
                 statement.executeInsert(insertArgs)
             }
         }
         commit()
     }
 
-    private fun readTracks(args: Array<String>): Map<String, List<String>> {
-        val songs = mutableMapOf<String, List<String>>()
+    private fun readTracks(args: Array<String>): ObjectObjectHashMap<String, List<String>> {
+        val songs = ObjectObjectHashMap<String, List<String>>(100_000)
         args[1].lines {
             val (trackId, songId, artist, title) = it.split(SEPARATOR)
-            songs[songId] = listOf(trackId, artist, title)
+            songs.put(songId,listOf(trackId, artist, title))
         }
         return songs
     }
