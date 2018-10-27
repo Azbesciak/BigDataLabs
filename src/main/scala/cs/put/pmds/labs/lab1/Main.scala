@@ -1,4 +1,4 @@
-package cs.put.pmds.labs
+package cs.put.pmds.labs.lab1
 
 import java.util.concurrent.ThreadLocalRandom
 
