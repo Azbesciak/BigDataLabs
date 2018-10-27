@@ -8,6 +8,10 @@ import java.sql.ResultSet
 import kotlin.system.measureTimeMillis
 
 object Sample {
+    private const val TRACKS_TABLE = "tracks"
+    private const val LISTENINGS_TABLE = "listenings"
+    private const val SEPARATOR = "<SEP>"
+
     @JvmStatic
     fun main(args: Array<String>) {
         require(args.size == 3) { "usage args: <path to db/':memory:'> <tracks_path> <triplets path>" }
@@ -15,10 +19,10 @@ object Sample {
             initialize()
             initData(args)
 
-            execute("Select count(*) from tracks") {
+            execute("Select count(*) from $TRACKS_TABLE") {
                 println("tracks: ${getInt(1)}")
             }
-            execute("Select count(*) from listenings") {
+            execute("Select count(*) from $LISTENINGS_TABLE") {
                 println("listenings: ${getInt(1)}")
             }
         }
@@ -26,8 +30,8 @@ object Sample {
 
     private fun Connection.initData(args: Array<String>) {
         val time = measureTimeMillis {
-            insertFromFile(args[1], "INSERT INTO tracks VALUES (?,?,?,?)")
-            insertFromFile(args[2], "INSERT INTO listenings VALUES (?,?,?)")
+            insertFromFile(args[1], "INSERT INTO $TRACKS_TABLE VALUES (?,?,?,?)")
+            insertFromFile(args[2], "INSERT INTO $LISTENINGS_TABLE VALUES (?,?,?)")
         }
         println("insert time: ${time / 1000}s")
     }
@@ -51,7 +55,7 @@ object Sample {
                 .use { statement ->
                     beginRequest()
                     filePath.lines {
-                        val values = it.split("<SEP>")
+                        val values = it.split(SEPARATOR)
                         statement.executeInsert(values)
                         counter++
                     }
@@ -73,10 +77,10 @@ object Sample {
             }.run { execute() }
 
     private fun Connection.initialize() {
-        executeUpdate("DROP TABLE IF EXISTS tracks;")
-        executeUpdate("DROP TABLE IF EXISTS listenings;")
+        executeUpdate("DROP TABLE IF EXISTS $TRACKS_TABLE;")
+        executeUpdate("DROP TABLE IF EXISTS $LISTENINGS_TABLE;")
         executeUpdate("""
-        CREATE TABLE tracks (
+        CREATE TABLE $TRACKS_TABLE (
             track_id varchar(18) NOT NULL,
             song_id varchar(18) NOT NULL,
             artist varchar(256) DEFAULT NULL,
@@ -86,9 +90,9 @@ object Sample {
     """)
         executeUpdate(
                 """
-                    CREATE TABLE listenings (
+                    CREATE TABLE $LISTENINGS_TABLE (
             user_id varchar(40) NOT NULL,
-            song_id varchar(18) NOT NULL REFERENCES tracks(song_id),
+            song_id varchar(18) NOT NULL REFERENCES $TRACKS_TABLE(song_id),
             listening_date DATETIME NOT NULL
         );"""
         )
