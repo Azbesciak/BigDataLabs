@@ -8,6 +8,10 @@ import java.sql.ResultSet
 import kotlin.system.measureTimeMillis
 
 object Sample {
+    private const val TRACKS_TABLE = "tracks"
+    private const val LISTENINGS_TABLE = "listenings"
+    private const val TRACK_LISTENINGS_TABLE = "tracks_listenings"
+
     @JvmStatic
     fun main(args: Array<String>) {
         require(args.size == 3) { "usage args: <path to db/':memory:'> <tracks_path> <triplets path>" }
@@ -15,21 +19,33 @@ object Sample {
             initialize()
             initData(args)
 
-            execute("Select count(*) from tracks") {
+            execute("Select count(*) from $TRACK_LISTENINGS_TABLE") {
                 println("tracks: ${getInt(1)}")
-            }
-            execute("Select count(*) from listenings") {
-                println("listenings: ${getInt(1)}")
             }
         }
     }
 
     private fun Connection.initData(args: Array<String>) {
         val time = measureTimeMillis {
-            insertFromFile(args[1], "INSERT INTO tracks VALUES (?,?,?,?)")
-            insertFromFile(args[2], "INSERT INTO listenings VALUES (?,?,?)")
+            beginRequest()
+            insertFromFile(args[1], "INSERT INTO $TRACKS_TABLE VALUES (?,?,?,?)")
+            insertFromFile(args[2], "INSERT INTO $LISTENINGS_TABLE VALUES (?,?,?)")
+            execute("""
+                create table $TRACK_LISTENINGS_TABLE as
+                    select t.track_id, t.song_id, t.title, t.artist, l.user_id, l.listening_date from
+                    $LISTENINGS_TABLE l left join $TRACKS_TABLE t on l.song_id = t.song_id;
+            """
+            )
+            dropTables(LISTENINGS_TABLE, TRACKS_TABLE)
+            commit()
         }
         println("insert time: ${time / 1000}s")
+    }
+
+    private fun Connection.execute(vararg commands: String) {
+        commands.forEach {
+            createStatement().execute(it)
+        }
     }
 
     private inline fun withDriver(driver: String, block: Connection.() -> Unit) =
@@ -49,14 +65,12 @@ object Sample {
         var counter = 0
         prepareStatement(sql)
                 .use { statement ->
-                    beginRequest()
                     filePath.lines {
                         val values = it.split("<SEP>")
                         statement.executeInsert(values)
                         counter++
                     }
                 }
-        commit()
         return counter
     }
 
@@ -73,10 +87,9 @@ object Sample {
             }.run { execute() }
 
     private fun Connection.initialize() {
-        executeUpdate("DROP TABLE IF EXISTS tracks;")
-        executeUpdate("DROP TABLE IF EXISTS listenings;")
+        dropTables(TRACKS_TABLE, LISTENINGS_TABLE, TRACK_LISTENINGS_TABLE)
         executeUpdate("""
-        CREATE TABLE tracks (
+        CREATE TABLE $TRACKS_TABLE (
             track_id varchar(18) NOT NULL,
             song_id varchar(18) NOT NULL,
             artist varchar(256) DEFAULT NULL,
@@ -86,13 +99,17 @@ object Sample {
     """)
         executeUpdate(
                 """
-                    CREATE TABLE listenings (
+                    CREATE TABLE $LISTENINGS_TABLE (
             user_id varchar(40) NOT NULL,
             song_id varchar(18) NOT NULL REFERENCES tracks(song_id),
             listening_date DATETIME NOT NULL
         );"""
         )
         autoCommit = false
+    }
+
+    private fun Connection.dropTables(vararg tables: String) = tables.forEach {
+        executeUpdate("DROP TABLE IF EXISTS $it;")
     }
 
     private fun Connection.executeUpdate(sql: String) = prepareStatement(sql).executeUpdate()
