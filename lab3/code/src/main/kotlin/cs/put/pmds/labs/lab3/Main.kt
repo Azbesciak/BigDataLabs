@@ -8,9 +8,8 @@ import java.sql.ResultSet
 import kotlin.system.measureTimeMillis
 
 object Sample {
-    private const val TRACKS_TABLE = "tracks"
-    private const val LISTENINGS_TABLE = "listenings"
     private const val TRACK_LISTENINGS_TABLE = "tracks_listenings"
+    private const val SEPARATOR = "<SEP>"
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -27,59 +26,51 @@ object Sample {
 
     private fun Connection.initData(args: Array<String>) {
         val time = measureTimeMillis {
-            beginRequest()
-            insertFromFile(args[1], "INSERT INTO $TRACKS_TABLE VALUES (?,?,?,?)")
-            insertFromFile(args[2], "INSERT INTO $LISTENINGS_TABLE VALUES (?,?,?)")
-            execute("""
-                create table $TRACK_LISTENINGS_TABLE as
-                    select t.track_id, t.song_id, t.title, t.artist, l.user_id, l.listening_date from
-                    $LISTENINGS_TABLE l left join $TRACKS_TABLE t on l.song_id = t.song_id;
-            """
-            )
-            dropTables(LISTENINGS_TABLE, TRACKS_TABLE)
-            commit()
+            val songs = readTracks(args)
+            insertListenings(args, songs)
         }
         println("insert time: ${time / 1000}s")
     }
 
-    private fun Connection.execute(vararg commands: String) {
-        commands.forEach {
-            createStatement().execute(it)
+    private fun Connection.insertListenings(args: Array<String>, songs: Map<String, List<String>>) {
+        beginRequest()
+        prepareStatement("""
+                    INSERT INTO $TRACK_LISTENINGS_TABLE
+                    (track_id,artist,title,user_id,song_id,listening_date)
+                    VALUES (?,?,?,?,?,?)
+                """).use { statement ->
+            args[2].lines {
+                val values = it.split(SEPARATOR)
+                val insertArgs = songs[values[1]]!! + values
+                statement.executeInsert(insertArgs)
+            }
         }
+        commit()
+    }
+
+    private fun readTracks(args: Array<String>): Map<String, List<String>> {
+        val songs = mutableMapOf<String, List<String>>()
+        args[1].lines {
+            val (trackId, songId, artist, title) = it.split(SEPARATOR)
+            songs[songId] = listOf(trackId, artist, title)
+        }
+        return songs
     }
 
     private inline fun withDriver(driver: String, block: Connection.() -> Unit) =
-            DriverManager.getConnection("jdbc:sqlite:$driver").use { con ->
-                con.block()
-            }
+            DriverManager.getConnection("jdbc:sqlite:$driver").use { it.block() }
 
     private inline fun Connection.execute(select: String, consumer: ResultSet.() -> Unit) {
         prepareStatement(select).executeQuery().use {
-            while (it.next()) {
+            while (it.next())
                 it.consumer()
-            }
         }
-    }
-
-    private fun Connection.insertFromFile(filePath: String, sql: String): Int {
-        var counter = 0
-        prepareStatement(sql)
-                .use { statement ->
-                    filePath.lines {
-                        val values = it.split("<SEP>")
-                        statement.executeInsert(values)
-                        counter++
-                    }
-                }
-        return counter
     }
 
     private inline fun String.lines(consumer: (String) -> Unit) = File(this)
             .inputStream()
             .reader()
-            .useLines { seq ->
-                seq.forEach(consumer)
-            }
+            .useLines { it.forEach(consumer) }
 
     private fun PreparedStatement.executeInsert(it: List<String>) =
             it.forEachIndexed { i, value ->
@@ -87,21 +78,14 @@ object Sample {
             }.run { execute() }
 
     private fun Connection.initialize() {
-        dropTables(TRACKS_TABLE, LISTENINGS_TABLE, TRACK_LISTENINGS_TABLE)
+        dropTables(TRACK_LISTENINGS_TABLE)
         executeUpdate("""
-        CREATE TABLE $TRACKS_TABLE (
+        CREATE TABLE $TRACK_LISTENINGS_TABLE (
             track_id varchar(18) NOT NULL,
             song_id varchar(18) NOT NULL,
             artist varchar(256) DEFAULT NULL,
             title varchar(256) DEFAULT NULL,
-            PRIMARY KEY (track_id)
-        );
-    """)
-        executeUpdate(
-                """
-                    CREATE TABLE $LISTENINGS_TABLE (
             user_id varchar(40) NOT NULL,
-            song_id varchar(18) NOT NULL REFERENCES tracks(song_id),
             listening_date DATETIME NOT NULL
         );"""
         )
