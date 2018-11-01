@@ -85,9 +85,8 @@ object Sample {
             PRIMARY KEY (track_id)
         );
     """)
-        executeUpdate(
-                """
-                    CREATE TABLE $LISTENINGS_TABLE (
+        executeUpdate("""
+        CREATE TABLE $LISTENINGS_TABLE (
             user_id varchar(40) NOT NULL,
             song_id varchar(18) NOT NULL REFERENCES $TRACKS_TABLE(song_id),
             listening_date DATETIME NOT NULL
@@ -108,14 +107,19 @@ object Sample {
                         async { artistsRanking() },
                         async { monthlyListenings() },
                         async { queenMostPopularSongListeners() }
-                ).map { println(it.await()) }
+                ).map { it.await().forEach { println(it) } }
             }
         }
         println("total query time: $time")
     }
 
-    private fun Connection.createSongsIndex() = createStatement()
-            .execute("create index songs on $LISTENINGS_TABLE(song_id);")
+    private fun Connection.createSongsIndex() {
+        createStatement()
+                .execute("create index songs on $LISTENINGS_TABLE(song_id);")
+        createStatement()
+                .execute("create index artists on $TRACKS_TABLE(song_id);")
+        commit()
+    }
 
     private fun Connection.tracksRanking() =
             execute("""
