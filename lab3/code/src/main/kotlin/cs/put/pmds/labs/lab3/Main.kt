@@ -14,22 +14,25 @@ object Sample {
     private const val LISTENINGS_TABLE = "listenings"
     private const val SEPARATOR = "<SEP>"
 
+    private val debug = System.getProperty("debug") == "true"
+
     @JvmStatic
     fun main(args: Array<String>) {
         require(args.size == 3) { "usage args: <path to db/':memory:'> <tracks_path> <triplets path>" }
-        withDriver(args[0]) {
-            initialize()
-            initData(args)
-            mineData()
+        measureTime("total") {
+            withDriver(args[0]) {
+                initialize()
+                initData(args)
+                mineData()
+            }
         }
     }
 
     private fun Connection.initData(args: Array<String>) {
-        val time = measureTimeMillis {
+        measureTime("init"){
             insertFromFile(args[1], "INSERT INTO $TRACKS_TABLE VALUES (?,?,?,?)")
             insertFromFile(args[2], "INSERT INTO $LISTENINGS_TABLE VALUES (?,?,?)")
         }
-        println("insert time: ${time / 1000}s")
     }
 
     private inline fun withDriver(driver: String, block: Connection.() -> Unit) =
@@ -98,8 +101,10 @@ object Sample {
     private fun Connection.executeUpdate(sql: String) = prepareStatement(sql).executeUpdate()
 
     private fun Connection.mineData() {
-        val time = measureTimeMillis {
+        measureTime("index") {
             createSongsIndex()
+        }
+        measureTime("query") {
             runBlocking {
                 arrayOf(
                         async { tracksRanking() },
@@ -110,7 +115,6 @@ object Sample {
                 ).map { it.await().forEach { println(it) } }
             }
         }
-        println("total query time: $time")
     }
 
     private fun Connection.createSongsIndex() {
@@ -182,4 +186,9 @@ object Sample {
 
     private fun ResultSet.serialize(fields: Int) = (1..fields).joinToString(" ") { getString(it) }
 
+    private inline fun measureTime(name: String, block: () -> Unit) {
+        val time = measureTimeMillis(block)
+        if (debug)
+            println("time of $name: ${time / 1000.0}s")
+    }
 }
