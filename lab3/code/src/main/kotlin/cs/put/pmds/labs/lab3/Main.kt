@@ -9,7 +9,7 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import kotlin.system.measureTimeMillis
 
-object Sample {
+object Main {
     private const val TRACKS_TABLE = "tracks"
     private const val LISTENINGS_TABLE = "listenings"
     private const val SEPARATOR = "<SEP>"

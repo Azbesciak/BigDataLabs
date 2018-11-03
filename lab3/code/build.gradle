@@ -24,13 +24,21 @@ dependencies {
     compile group: 'org.xerial', name: 'sqlite-jdbc', version: '3.25.2'
     // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core
     compile group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core', version: '0.30.2'
-
-
 }
 
 kotlin {
     experimental {
         coroutines 'enable'
+    }
+}
+
+jar {
+    manifest {
+        attributes "Main-Class": "cs.put.pmds.labs.lab3.Main"
+    }
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
     }
 }
 
