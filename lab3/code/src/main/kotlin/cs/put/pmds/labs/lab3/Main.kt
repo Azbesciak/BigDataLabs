@@ -143,7 +143,7 @@ object Main {
         from listenings
         group by user_id
         order by count(distinct song_id) desc
-        limit 5;
+        limit 10;
         """) { serialize(2) }
 
     private fun Connection.artistsRanking() = execute("""
@@ -152,7 +152,7 @@ object Main {
            join listenings l on l.song_id = t.song_id
     group by t.artist
     order by count(*) desc
-    limit 3;
+    limit 1;
     """) {
         serialize(2)
     }
@@ -169,17 +169,19 @@ object Main {
 
     private fun Connection.queenMostPopularSongListeners() =
             execute("""
-           select distinct user_id from listenings l
-        where l.song_id in (
-          select q.song_id as sid
-          from (select song_id from tracks where artist = 'Queen') q
-                 join listenings l on l.song_id = q.song_id
-          group by q.song_id
-          order by count(*) desc
-          limit 3
-            )
-        order by user_id
-        limit 10
+            select user_id
+            from (select distinct user_id, l.song_id
+                  from listenings l
+                  where l.song_id in (select q.song_id as sid
+                                      from (select song_id from tracks where artist = 'Queen') q
+                                             join listenings l on l.song_id = q.song_id
+                                      group by q.song_id
+                                      order by count(*) desc
+                                      limit 3))
+            group by user_id
+            having count(*) = 3
+            order by user_id
+            limit 10;
         """) {
                 serialize(1)
             }
