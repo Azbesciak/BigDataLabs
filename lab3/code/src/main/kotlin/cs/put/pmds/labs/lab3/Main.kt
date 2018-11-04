@@ -178,12 +178,10 @@ object Main {
 
     private fun Connection.artistsRanking() =
             execute("""
-                select t.artist, count(*) as songs_listenings_count
-                from $TRACKS_TABLE t
-                       join $LISTENINGS_TABLE l on l.song_id = t.song_id
-                group by t.artist
-                order by count(*) desc
-                limit 1;
+                select artist, sum(listenings_count) as songs_listenings_count
+                from $SONGS_LISTENINGS_COUNT_TABLE
+                group by artist
+                order by sum(listenings_count) desc limit 1;
             """) { serialize(2) }
 
     private fun Connection.monthlyListenings() =

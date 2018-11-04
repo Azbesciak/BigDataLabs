@@ -45,17 +45,17 @@ Execution time (i7 7700h | 16Gb | NVMe 512Gb 3000R/2100W):
 | Data insert | 55 - 60 s |
 | Index creation | 25 - 30 s |
 | Query time | 110-120 s |
-| **Total** | **210-220s** |
+| **Total** | **210-220 s** |
 
 #### After star schema
 | Part | Time [s] |
 | ---- | -------- |
 | Data insert | 55 - 60 s |
 | Index creation | 25 - 30 s |
-| Create table: songs_listenings_numbers | 16s |
-| Create table: monthly_listenings | 30s |
-| Query | 65-70s |
-| **Total** | **200 - 210s** |
+| Create table: songs_listenings_numbers | 16 s |
+| Create table: monthly_listenings | 30 s |
+| Query | 35 - 40 s |
+| **Total** | **175 - 185 s** |
 
 As you see, it allowed to speed up query process a lot - however, it is rather for static data (each update in such tables may cause additional cost).
 
