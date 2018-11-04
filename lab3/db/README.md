@@ -1,3 +1,4 @@
+# [Code](https://github.com/Azbesciak/BigDataLabs/blob/master/lab3/code/src/main/kotlin/cs/put/pmds/labs/lab3/Main.kt) 
 ## Stack
 - sqlite - Because it was in example.
 - kotlin - For faster prototyping.
