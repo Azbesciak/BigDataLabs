@@ -20,7 +20,8 @@ object Main {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        require(args.size == 3) { "usage args: <path to db/':memory:'> <tracks_path> <triplets path>" }
+        require(args.size == 3) {
+            "usage args: <path to db/':memory:'> <tracks_path> <triplets path>\n got: ${args.toList()}" }
         measureTime("total") {
             withDriver(args[0]) {
                 initialize()
