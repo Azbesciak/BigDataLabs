@@ -2,15 +2,62 @@
 - sqlite - Because it was in example.
 - kotlin - For faster prototyping.
 
+## Schema
+### Basic
+```sql
+CREATE TABLE tracks (
+    track_id varchar(18) NOT NULL,
+    song_id varchar(18) NOT NULL,
+    artist varchar(256) DEFAULT NULL,
+    title varchar(256) DEFAULT NULL,
+    PRIMARY KEY (track_id)
+);
+        
+CREATE TABLE listenings (
+    user_id varchar(40) NOT NULL,
+    song_id varchar(18) NOT NULL REFERENCES tracks(song_id),
+    listening_date DATETIME NOT NULL
+);
+```
+
+### After star-schema transform
+Added two tables:
+```sql
+create table songs_listenings_numbers as
+    select t.title, t.artist, t.song_id, count(*) as listenings_count
+    from tracks t
+         join $LISTENINGS_TABLE l on t.song_id = l.song_id
+    group by l.song_id;
+    
+create table monthly_listenings as
+    select month, count(*) as listenings
+    from (SELECT strftime('%m', datetime(listening_date, 'unixepoch')) as month FROM listenings)
+    group by month
+    order by month;
+```
+
 ## Results
 Execution time (i7 7700h | 16Gb | NVMe 512Gb 3000R/2100W):
 
+#### Before star schema:
 | Part | Time [s] |
 | ---- | -------- |
 | Data insert | 55 - 60 s |
 | Index creation | 25 - 30 s |
 | Query time | 110-120 s |
-| **Total** | 210-220s |
+| **Total** | **210-220s** |
+
+#### After star schema
+| Part | Time [s] |
+| ---- | -------- |
+| Data insert | 55 - 60 s |
+| Index creation | 25 - 30 s |
+| Create table: songs_listenings_numbers | 16s |
+| Create table: monthly_listenings | 30s |
+| Query | 65-70s |
+| **Total** | **200 - 210s** |
+
+As you see, it allowed to speed up query process a lot - however, it is rather for static data (each update in such tables may cause additional cost).
 
 ## Output
 ```
