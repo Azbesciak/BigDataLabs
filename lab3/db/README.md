@@ -20,7 +20,7 @@ CREATE TABLE listenings (
 );
 ```
 
-### After star-schema transform
+### Star schema
 Added two tables:
 ```sql
 create table songs_listenings_numbers as
