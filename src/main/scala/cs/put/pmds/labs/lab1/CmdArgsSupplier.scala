@@ -1,5 +1,7 @@
 package cs.put.pmds.labs.lab1
 
+import scala.io.StdIn
+
 
 object CmdArgsSupplier extends ProblemArgsSupplier {
 	def produce(): ProgramArgs = {
