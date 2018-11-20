@@ -45,7 +45,7 @@ splitFile triplets_sample_20p.txt | # split on csv
     sortFile 1 4G | tee triplets.csv | # sort on user ID
     mapIdPipe 1-1 > mapped_users.csv  # map user ID
 join -t$',' -1 1 -2 2 -o 2.1,1.2,1.3 --nocheck-order triplets.csv mapped_users.csv | # replace user ID with mapped values
-    awk -F"," '{OFS=","; $3=(strftime("%Y-%m-%d", $3)); print $0}' | # extract date from timestamp
+    awk -F"," '{OFS=","; $3=(strftime("%Y-%m-%d", $3, 1)); print $0}' | # extract date from timestamp
     sortFile 2 4G > tirplets_by_song_id.csv # sort on song ID
 join -1 2 -2 2 -o 1.1,2.1,1.3 -t$',' --nocheck-order tirplets_by_song_id.csv song_id.csv > triplets_mapped.csv
 rm triplets.csv
