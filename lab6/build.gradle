@@ -2,12 +2,13 @@ group 'cs.put.pmds'
 version '1.0-SNAPSHOT'
 
 apply plugin: 'scala'
+apply plugin: 'application'
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compile group: 'org.plotly-scala', name: 'plotly-almond_2.12', version: '0.4.2'
+    compile group: 'org.scala-lang', name: 'scala-library', version: '2.12.7'
     compile group: 'org.apache.spark', name: 'spark-core_2.12', version: '2.4.0'
 }
 
@@ -15,3 +16,4 @@ tasks.withType(ScalaCompile) {
     targetCompatibility = 1.8
     sourceCompatibility = 1.8
 }
+mainClassName = "cs.put.pmds.lab6.Runner"
