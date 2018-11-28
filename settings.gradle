@@ -2,3 +2,4 @@ rootProject.name = 'labs'
 include ":lab1"
 include "lab3/:code"
 include ":lab6"
+include ":lab7"
