@@ -7,6 +7,7 @@ object Runner extends App {
 	args(0).toInt match {
 		case 1 => Statistic main taskArgs
 		case 2 => MatrixMultiplier main taskArgs
+		case 3 => SongsQuerier main taskArgs
 		case x => throw new IllegalStateException(s"unknown argument $x")
 	}
 }

@@ -6,7 +6,7 @@ apply plugin: 'application'
 repositories {
     mavenCentral()
 }
-
+applicationDefaultJvmArgs = ["-Xms8g", "-Xmx12g"]
 dependencies {
     compile group: 'org.scala-lang', name: 'scala-library', version: '2.12.7'
     compile group: 'org.apache.spark', name: 'spark-core_2.12', version: '2.4.0'
