@@ -4,9 +4,9 @@ import com.carrotsearch.hppc.IntHashSet
 import java.io.BufferedWriter
 import java.io.File
 import java.math.RoundingMode
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.stream.Stream
+import kotlin.streams.toList
 import kotlin.system.measureTimeMillis
 
 fun main(args: Array<String>) {
@@ -31,13 +31,15 @@ fun main(args: Array<String>) {
         }
         println("used mem: ${mem - Runtime.getRuntime().freeMemory()} songs: ${userSongs.size}")
         val counter = AtomicInteger(0)
-        val step = userSongs.size / 1000
+        val total = 10000L//userSongs.size.toLong()
+        val step = total / 1000
         val progress = AtomicInteger(0)
 
         val neighbors = userSongs
                 .parallelStream()
+                .limit(total)
                 .peek {
-                    if (counter.incrementAndGet() % step == 0) print("progress: ${progress.incrementAndGet() / 10.0}%\r")
+                    if (counter.incrementAndGet() % step == 0L) print("progress: ${progress.incrementAndGet() / 10.0}%\r")
                 }
                 .map { user -> user.first to findClosestNeighbours(userSongs, user) }
 
@@ -52,13 +54,15 @@ fun main(args: Array<String>) {
 
 }
 
-private infix fun BufferedWriter.writeUserNeighbours(neighbors: Stream<Pair<Int, Stream<Pair<Int, Double>>>>) {
+private infix fun BufferedWriter.writeUserNeighbours(neighbors: Stream<Pair<Int, List<Pair<Int, Double>>>>) {
     neighbors.forEach { (user, neigh) ->
-        write("User = $user\n")
-        neigh.forEach { (u, jac) ->
-            write("\t$u ${jac.toBigDecimal().setScale(4, RoundingMode.HALF_UP)}\n")
+        synchronized(this) {
+            write("User = $user\n")
+            neigh.forEach { (u, jac) ->
+                write("\t$u ${jac.toBigDecimal().setScale(4, RoundingMode.HALF_UP)}\n")
+            }
+            newLine()
         }
-        newLine()
     }
 }
 
@@ -70,6 +74,7 @@ private fun findClosestNeighbours(userSongs: List<Pair<Int, IntArray>>, user: Pa
                     else other.first to jaccardCoef(user.second, other.second)
                 }.filter { it.second > 0 }
                 .limit(100)
+                .toList()
 
 private fun jaccardCoef(user: IntArray, other: IntArray): Double {
     if (user.first() > other.last() || user.last() < other.first()) return 0.0
