@@ -65,16 +65,28 @@ private infix fun BufferedWriter.writeUserNeighbours(neighbors: Stream<Pair<Int,
         }
     }
 }
+typealias User = Pair<Int, IntArray>
 
-private fun findClosestNeighbours(userSongs: List<Pair<Int, IntArray>>, user: Pair<Int, IntArray>) =
+private fun findClosestNeighbours(userSongs: List<User>, user: User) =
         userSongs
                 .stream()
-                .map { other ->
-                    if (user.first == other.first) other.first to 0.0
-                    else other.first to jaccardCoef(user.second, other.second)
-                }.filter { it.second > 0 }
+                .map { other -> other.first to compute(user, other)}
+                .filter { it.second > 0 }
+                .sorted { o1, o2 ->
+                    val dif = o1.second - o2.second
+                    when {
+                        dif < 0 -> 1
+                        dif > 0 -> -1
+                        else -> 0
+                    }
+                }
                 .limit(100)
                 .toList()
+
+private fun compute(u1: User, u2: User): Double {
+    if (u1.first == u2.first) return 0.0
+    return jaccardCoef(u1.second, u2.second)
+}
 
 private fun jaccardCoef(user: IntArray, other: IntArray): Double {
     if (user.first() > other.last() || user.last() < other.first()) return 0.0
