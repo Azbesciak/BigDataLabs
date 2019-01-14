@@ -33,26 +33,29 @@ fun countAndWriteCoefficient(total: Long, userSongs: List<User>, output: String,
 fun jaccardCoef(user: IntArray, other: IntArray): Double {
     if (user.first() > other.last() || user.last() < other.first()) return 0.0
     var common = 0
-    var onlyUser = 0.0
     val userIterator = user.iterator()
     val otherIterator = other.iterator()
     var currentUser = userIterator.next()
     var currentOther = otherIterator.next()
-    while (userIterator.hasNext() && otherIterator.hasNext()) {
+    loop@ while (true) {
         when {
             currentUser == currentOther -> {
                 common++
+                if (!userIterator.hasNext() || !otherIterator.hasNext()) break@loop
                 currentUser = userIterator.next()
                 currentOther = otherIterator.next()
             }
-            currentUser > currentOther -> currentOther = otherIterator.next()
+            currentUser > currentOther -> {
+                if (!otherIterator.hasNext()) break@loop
+                currentOther = otherIterator.next()
+            }
             currentUser < currentOther -> {
-                onlyUser++
+                if (!userIterator.hasNext()) break@loop
                 currentUser = userIterator.next()
             }
         }
     }
-    return common / (other.size + onlyUser)
+    return common.toDouble() / (other.size + user.size - common)
 }
 
 private fun findClosestNeighbours(userSongs: List<User>, user: User, compute: (User, User) -> Double) =
@@ -98,7 +101,7 @@ private infix fun BufferedWriter.writeUserNeighbours(neighbors: Stream<Pair<Int,
         synchronized(this) {
             write("User = $user\n")
             neigh.forEach { (u, jac) ->
-                write("\t$u ${jac.toBigDecimal().setScale(4, RoundingMode.HALF_UP)}\n")
+                write("\t$u ${jac.toBigDecimal().setScale(5, RoundingMode.HALF_UP)}\n")
             }
             newLine()
         }
@@ -112,7 +115,7 @@ fun fetchUsers(file: File) = file.useLines { lines ->
             .map(::mapLine)
             .filter { it[0] != it[1] }
             .groupBy { it.first() }
-            .map {(id, values) ->
+            .map { (id, values) ->
                 val s = IntHashSet(values.size)
                 values.forEach { s.add(it[1]) }
                 User(id, s.toArray().apply { sort() })
