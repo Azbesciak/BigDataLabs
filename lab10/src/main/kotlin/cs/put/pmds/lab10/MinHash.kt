@@ -7,7 +7,7 @@ import kotlin.math.sqrt
 
 data class HashFunction(val a: Long, val b: Long) {
     companion object {
-        private const val LARGE_PRIME = Int.MAX_VALUE
+        private const val LARGE_PRIME = 28000019
         infix fun create(r: Random) = HashFunction(nextVal(r), nextVal(r))
         private fun nextVal(r: Random) = (r.nextInt(LARGE_PRIME - 1) + 1).toLong()
     }
@@ -15,17 +15,9 @@ data class HashFunction(val a: Long, val b: Long) {
     operator fun get(x: Int) = ((a * x.toLong() + b) % LARGE_PRIME).toInt()
 }
 
-class MinHash(val n: Int, dictSize: Int, r: Random = Random()) {
+class MinHash(val n: Int, r: Random = Random()) {
     init {
         require(n > 0) { "Signature size should be positive" }
-        require(dictSize > 0) { "Dictionary size (or vector size) should be positive" }
-
-        // In function h(i, x) the largest value could be
-        // dictSize * dictSize + dictSize
-        // throw an error if dictSize * dictSize + dictSize > Long.MAX_VALUE
-        require(dictSize <= (Long.MAX_VALUE - dictSize) / dictSize) {
-            "Dictionary size (or vector size) is too big and will cause a multiplication overflow"
-        }
     }
 
     private val hashFunctions = (0 until n).map { HashFunction create r }

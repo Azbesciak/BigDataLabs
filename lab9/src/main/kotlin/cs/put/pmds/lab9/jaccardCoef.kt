@@ -19,7 +19,7 @@ fun countAndWriteCoefficient(total: Long, userSongs: List<User>, output: String,
             .limit(total)
             .peek {
                 if (counter.incrementAndGet() % step == 0L)
-                    print("progress: ${progress.incrementAndGet() / 10.0}%\r")
+                    print("progress: ${progress.incrementAndGet() * step / total.toDouble() * 100}%\r")
             }
             .map { user -> user.id to findClosestNeighbours(userSongs, user, compute) }
 
