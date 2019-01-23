@@ -32,24 +32,26 @@ class MinHash(val n: Int, r: Random = Random()) {
         return sig
     }
 
-    /**
-     * Computes an estimation of Jaccard similarity (the number of elements in
-     * common) between two sets, using the MinHash signatures of these two sets.
-     *
-     * @param sig1 MinHash signature of set1
-     * @param sig2 MinHash signature of set2 (produced using the same
-     * hashFunctions)
-     * @return the estimated similarity
-     */
-    fun similarity(sig1: IntArray, sig2: IntArray): Double {
-        require(sig1.size == sig2.size) { "Size of signatures should be the same" }
-        var sim = 0.0
-        for (i in sig1.indices) {
-            if (sig1[i] == sig2[i]) {
-                sim += 1.0
+    companion object {
+        /**
+         * Computes an estimation of Jaccard similarity (the number of elements in
+         * common) between two sets, using the MinHash signatures of these two sets.
+         *
+         * @param sig1 MinHash signature of set1
+         * @param sig2 MinHash signature of set2 (produced using the same
+         * hashFunctions)
+         * @return the estimated similarity
+         */
+        fun similarity(sig1: IntArray, sig2: IntArray): Double {
+            require(sig1.size == sig2.size) { "Size of signatures should be the same" }
+            var sim = 0.0
+            for (i in sig1.indices) {
+                if (sig1[i] == sig2[i]) {
+                    sim += 1.0
+                }
             }
-        }
 
-        return sim / sig1.size
+            return sim / sig1.size
+        }
     }
 }

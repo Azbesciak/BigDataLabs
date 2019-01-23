@@ -29,11 +29,11 @@ fun main(args: Array<String>) {
                 //            listOf(100).forEach { n ->
                 println("TOTAL: $total n: $n")
                 val minHash = MinHash(n)
+                val usersSigs = users.generateMinHashes(minHash)
                 val minHashTime = measureTimeMillis {
-                    val usersSigs = users.generateMinHashes(minHash)
-                    val outName = formatName(output, "has", total, n)
+                    val outName = formatName(output, "has_$n", total)
                     countAndWriteCoefficient(total.toLong(), usersSigs, outName, { usersSigs }) { u1, u2 ->
-                        minHash.similarity(u1.favourites, u2.favourites)
+                        MinHash.similarity(u1.favourites, u2.favourites)
                     }
                 }
                 println("minHash time: $minHashTime")
@@ -43,10 +43,11 @@ fun main(args: Array<String>) {
     println("total time: $measuredTime")
 }
 
-private fun formatName(base: String, algo: String, total: Int, n: Int? = null) = File(base).run {
-    "${parentFile.path}/$algo${n ?: ""}-$total-$name"
+fun List<User>.generateMinHashes(minHash: MinHash): List<User> {
+    val start = System.currentTimeMillis()
+    return parallelStream()
+            .map { it.copy(favourites = minHash.signature(it.favourites)) }
+            .toList().also {
+                println("generated minHashes for ${System.currentTimeMillis() - start}")
+            }
 }
-
-fun List<User>.generateMinHashes(minHash: MinHash) = parallelStream()
-        .map { it.copy(favourites = minHash.signature(it.favourites)) }
-        .toList()
