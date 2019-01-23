@@ -1,13 +1,9 @@
-package cs.put.pmds.lab10
+package cs.put.pmds.lab10.compare
 
+import com.carrotsearch.hppc.IntDoubleHashMap
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.abs
-import kotlin.math.pow
-import kotlin.math.sqrt
 
 object MediumErrorCounter {
     @JvmStatic
@@ -24,36 +20,14 @@ object MediumErrorCounter {
         val sorted1 = fetchUsers(in1)
         val sorted2 = fetchUsers(in2)
         require(sorted1.size == sorted2.size) { "file sizes are not equal" }
-        val u1More = AtomicInteger()
-        val u2More = AtomicInteger()
-        val u2SimMore = AtomicInteger()
-        val u1SimMore = AtomicInteger()
+        val errorCounter = ErrorCounter()
 
-        val squareError = sorted1.zip(sorted2)
+        sorted1.zip(sorted2)
                 .parallelStream()
-                .flatMap { (u1, u2) ->
-                    require(u1.id == u2.id) { "users ids are not equal (${u1.id} vs ${u2.id})" }
-                    if (u1.coeff.size > u2.coeff.size) {
-                        u1More.incrementAndGet()
-                    } else if (u2.coeff.size > u1.coeff.size) {
-                        u2More.incrementAndGet()
-                    }
-                    u1.coeff.zip(u2.coeff).stream()
+                .forEach { (u1, u2) ->
+                    errorCounter.countError(u1, u2)
                 }
-                .mapToDouble { (c1, c2) ->
-                    if (c1.value > c2.value) u1SimMore.incrementAndGet()
-                    else if (c2.value > c1.value) u2SimMore.incrementAndGet()
-                    (c1.value - c2.value).pow(2)
-                }
-                .average()
-                .let { sqrt(it.asDouble) }
-        return Result(
-                squareError,
-                u1More.get(),
-                u2More.get(),
-                u1SimMore.get(),
-                u2SimMore.get()
-        )
+        return errorCounter.result
     }
 
     private fun fetchUsers(in1: String): List<UserCompare> {
@@ -73,13 +47,10 @@ object MediumErrorCounter {
     }
 }
 
-
 data class UserCompare(
         val id: Int,
-        val coeff: MutableList<Coeff> = mutableListOf()
+        val coeff: IntDoubleHashMap = IntDoubleHashMap()
 )
-
-data class Coeff(val userId: Int, val value: Double)
 
 class UserCreator {
     val users = mutableListOf<UserCompare>()
@@ -90,22 +61,13 @@ class UserCreator {
     }
 
     fun addValue(id: Int, value: Double) {
-        requireNotNull(currentUser) { "current user is null" }.coeff += Coeff(id, value)
+        requireNotNull(currentUser) { "current user is null" }.coeff.put(id, value)
     }
 
     fun finishUser() {
         currentUser?.also {
-            it.coeff.sortWith(compareBy({ it.value }, { it.userId }))
             users += it
         }
         currentUser = null
     }
 }
-
-data class Result(
-        val squareAverageError: Double,
-        val hashLongerList: Int,
-        val jacLongerList: Int,
-        val hashSimMore: Int,
-        val jacSimMore: Int
-)
