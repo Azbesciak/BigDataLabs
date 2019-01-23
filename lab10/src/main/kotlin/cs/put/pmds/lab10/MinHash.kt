@@ -7,7 +7,7 @@ import kotlin.math.sqrt
 
 data class HashFunction(val a: Long, val b: Long) {
     companion object {
-        private const val LARGE_PRIME = 28000019
+        private const val LARGE_PRIME = 1299827
         infix fun create(r: Random) = HashFunction(nextVal(r), nextVal(r))
         private fun nextVal(r: Random) = (r.nextInt(LARGE_PRIME - 1) + 1).toLong()
     }
@@ -23,7 +23,7 @@ class MinHash(val n: Int, r: Random = Random()) {
     private val hashFunctions = (0 until n).map { HashFunction create r }
 
     fun signature(values: IntArray): IntArray {
-        val sig = IntArray(n).apply { fill(Int.MAX_VALUE) }
+        val sig = IntArray(n) { Int.MAX_VALUE }
         values.forEach { value ->
             sig.forEachIndexed { si, sval ->
                 sig[si] = min(sval, hashFunctions[si][value])
