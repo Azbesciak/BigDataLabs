@@ -52,26 +52,4 @@ class MinHash(val n: Int, r: Random = Random()) {
 
         return sim / sig1.size
     }
-
-    /**
-     * Computes the expected error of similarity computed using signatures.
-     *
-     * @return the expected error
-     */
-    fun error() = 1.0 / sqrt(n.toDouble())
-
-    companion object {
-
-        /**
-         * Computes the size of the signature required to achieve a given error in
-         * similarity estimation. (1 / error^2)
-         *
-         * @param error
-         * @return size of the signature
-         */
-        fun size(error: Double): Int {
-            require(error in 0.0..1.0) { "error should be in [0 .. 1]" }
-            return (1 / (error * error)).roundToInt()
-        }
-    }
 }
