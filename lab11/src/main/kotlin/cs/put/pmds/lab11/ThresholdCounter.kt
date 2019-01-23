@@ -63,5 +63,5 @@ data class ThresholdResult(
         val threshold: BigDecimal,
         val missingPercentage: BigDecimal,
         val bellowThresholdAvgCount: BigDecimal,
-        val stdBellowThreshold: BigDecimal
+        val avgBellowThreshold: BigDecimal
 )
