@@ -3,9 +3,10 @@ package cs.put.pmds.lab10.compare
 import java.io.File
 import java.util.stream.Stream
 
-data class FilesCompare(
+data class FilesCompare<T>(
         val original: List<File>,
-        val another: List<File>
+        val another: List<File>,
+        val counter: (String, String) -> ErrorCounter<T>
 ) {
     fun compare(): Stream<String> {
         validateSizes()
@@ -13,7 +14,7 @@ data class FilesCompare(
         return orgToComp.zip(another)
                 .stream()
                 .map { (file1, file2) ->
-                    val stats = MediumErrorCounter.getStatsFromEach(file1.absolutePath, file2.absolutePath)
+                    val stats = FileErrorCounter(counter).getStatsFromEach(file1.absolutePath, file2.absolutePath)
                     val (total, n) = file1.nameWithoutExtension.split("-").drop(1)
                     "total: $total n: $n - $stats"
                 }

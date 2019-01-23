@@ -5,22 +5,14 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 
-object MediumErrorCounter {
-    @JvmStatic
-    fun main(args: Array<String>) {
-        require(args.size == 2) { "require 2 args: <file 1> <file 2> <output>, got ${args.toList()}" }
-        val (in1, in2) = args
-        val stats = getStatsFromEach(in1, in2)
-        println(stats)
-    }
-
-    fun getStatsFromEach(in1: String, in2: String): Result {
+class FileErrorCounter<T>(private val counter: (String, String) -> ErrorCounter<T>) {
+    fun getStatsFromEach(in1: String, in2: String): T {
         require(File(in1).exists()) { "file 1 not exists" }
         require(File(in2).exists()) { "file 2 not exists" }
         val sorted1 = fetchUsers(in1)
         val sorted2 = fetchUsers(in2)
         require(sorted1.size == sorted2.size) { "file sizes are not equal" }
-        val errorCounter = ErrorCounter()
+        val errorCounter = counter(in1, in2)
 
         sorted1.zip(sorted2)
                 .parallelStream()
