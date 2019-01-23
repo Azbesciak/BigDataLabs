@@ -11,10 +11,10 @@ fun main(args: Array<String>) {
     }
     val mem = Runtime.getRuntime().freeMemory()
     val measuredTime = measureTimeMillis {
-        val userSongs = fetchUsers(file)
-        println("used mem: ${mem - Runtime.getRuntime().freeMemory()} songs: ${userSongs.size}")
-        val total = 100L//userSongs.size.toLong()
-        countAndWriteCoefficient(total, userSongs, output) { u1, u2 ->
+        val (users, songsUsers) = fetchUsers(file)
+        println("used mem: ${mem - Runtime.getRuntime().freeMemory()} songs: ${users.size}")
+        val total = 10000L//userSongs.size.toLong()
+        countAndWriteCoefficient(total, users, output, {u -> u.getNeighbours(songsUsers, users)}) { u1, u2 ->
             jaccardCoef(u1.favourites, u2.favourites)
         }
     }

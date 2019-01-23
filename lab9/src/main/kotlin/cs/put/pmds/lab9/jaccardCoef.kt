@@ -1,6 +1,8 @@
 package cs.put.pmds.lab9
 
+import com.carrotsearch.hppc.IntArrayList
 import com.carrotsearch.hppc.IntHashSet
+import com.carrotsearch.hppc.IntObjectHashMap
 import java.io.BufferedWriter
 import java.io.File
 import java.math.RoundingMode
@@ -8,21 +10,28 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.stream.Stream
 import kotlin.math.min
 import kotlin.streams.toList
+import kotlin.system.measureTimeMillis
 
 
-fun countAndWriteCoefficient(total: Long, userSongs: List<User>, output: String, compute: (User, User) -> Double) {
+fun countAndWriteCoefficient(total: Long, users: List<User>, output: String,
+                             userNeighbours: (User) -> List<User>,
+                             compute: (User, User) -> Double) {
     val counter = AtomicInteger(0)
     val step = total / min(total, 1000)
     val progress = AtomicInteger(0)
-    val neighbors = userSongs
+    val neighbors = users
             .parallelStream()
             .limit(total)
             .peek {
                 if (counter.incrementAndGet() % step == 0L)
                     print("progress: ${progress.incrementAndGet() * step / total.toDouble() * 100}%\r")
             }
-            .map { user -> user.id to findClosestNeighbours(userSongs, user, compute) }
+            .map { user -> user.id to findClosestNeighbours(userNeighbours(user), user, compute) }
 
+    writeToFile(output, neighbors)
+}
+
+fun writeToFile(output: String, neighbors: Stream<Pair<Int, List<Pair<Int, Double>>>>) {
     File(output)
             .also { it.parentFile.mkdirs() }
             .outputStream()
@@ -56,6 +65,14 @@ fun jaccardCoef(user: IntArray, other: IntArray): Double {
         }
     }
     return common.toDouble() / (other.size + user.size - common)
+}
+
+fun User.getNeighbours(songs: IntObjectHashMap<IntArrayList>, users: List<User>): List<User> {
+    val neighbours = IntHashSet(favourites.size)
+    favourites.forEach { song ->
+        neighbours.addAll(songs[song])
+    }
+    return neighbours.map { users[it.value - 1] }
 }
 
 private fun findClosestNeighbours(userSongs: List<User>, user: User, compute: (User, User) -> Double) =
@@ -110,14 +127,48 @@ private infix fun BufferedWriter.writeUserNeighbours(neighbors: Stream<Pair<Int,
 
 private fun mapLine(it: String) = it.split(",").map { it.trim().toInt() }
 
-fun fetchUsers(file: File) = file.useLines { lines ->
-    lines.drop(1)
-            .map(::mapLine)
-            .filter { it[0] != it[1] }
-            .groupBy { it.first() }
-            .map { (id, values) ->
-                val s = IntHashSet(values.size)
-                values.forEach { s.add(it[1]) }
-                User(id, s.toArray().apply { sort() })
-            }.toList()
+data class Users(
+        val users: List<User>,
+        val songsListeners: IntObjectHashMap<IntArrayList>
+)
+
+fun fetchUsers(file: File): Users {
+    val (users, usersTime) = fetchUsersFromFile(file)
+    println("fetch time: $usersTime")
+    val (songs, songsTime) = getSongsUsers(users)
+    println("time of mapping: $songsTime")
+    return Users(users, songs)
 }
+
+fun fetchUsersFromFile(file: File): Pair<List<User>, Long> {
+    val start = System.currentTimeMillis()
+    return file.useLines { lines ->
+        lines.drop(1)
+                .map(::mapLine)
+                .filter { it[0] != it[1] }
+                .groupBy { it.first() }
+                .map { (id, values) ->
+                    val s = IntHashSet(values.size)
+                    values.forEach { s.add(it[1]) }
+                    User(id, s.toArray().apply { sort() })
+                }.toList()
+    }.run { this to (System.currentTimeMillis() - start) }
+}
+
+
+private fun getSongsUsers(users: List<User>): Pair<IntObjectHashMap<IntArrayList>, Long> {
+    val songs = IntObjectHashMap<IntArrayList>(2_000_000)
+    val time = measureTimeMillis {
+        users.forEach {
+            it.favourites.forEach { f -> songs.computeIfAbsent(f) { IntArrayList() }.add(it.id) }
+        }
+    }
+    return songs to time
+}
+
+inline fun <reified T> IntObjectHashMap<T>.computeIfAbsent(id: Int, f: IntObjectHashMap<T>.() -> T) =
+        get(id) ?: run {
+            val newRes = f()
+            put(id, newRes)
+            newRes
+        }
