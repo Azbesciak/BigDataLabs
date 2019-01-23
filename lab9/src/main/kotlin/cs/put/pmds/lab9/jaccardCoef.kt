@@ -82,16 +82,9 @@ private fun findClosestNeighbours(userSongs: List<User>, user: User, compute: (U
                     other.id to if (user.id == other.id) 1.0 else compute(user, other)
                 }
                 .filter { it.second > 0 }
-                .sorted { o1, o2 ->
-                    val dif = o1.second - o2.second
-                    when {
-                        dif < 0 -> 1
-                        dif > 0 -> -1
-                        else -> 0
-                    }
-                }
-                .limit(100)
                 .toList()
+                .sortedWith(compareBy({ -it.second }, { it.first }))
+                .take(100)
 
 data class User(val id: Int, val favourites: IntArray) {
     override fun equals(other: Any?): Boolean {
