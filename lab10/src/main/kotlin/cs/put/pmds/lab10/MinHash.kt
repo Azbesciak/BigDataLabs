@@ -2,28 +2,27 @@ package cs.put.pmds.lab10
 
 import java.util.Random
 import kotlin.math.min
-import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
-data class HashFunction(val a: Long, val b: Long) {
+data class HashFunction(val a: Long, val b: Long, val mod: Int = LARGE_PRIME) {
     companion object {
         private const val LARGE_PRIME = 1299827
         infix fun create(r: Random) = HashFunction(nextVal(r), nextVal(r))
         private fun nextVal(r: Random) = (r.nextInt(LARGE_PRIME - 1) + 1).toLong()
     }
 
-    operator fun get(x: Int) = ((a * x.toLong() + b) % LARGE_PRIME).toInt()
+    operator fun get(x: Int) = ((a * x.toLong() + b) % mod).toInt()
 }
 
-class MinHash(val n: Int, r: Random = Random()) {
+class MinHash(private val hashFunctions: List<HashFunction>) {
     init {
+        require(hashFunctions.isNotEmpty()) {"expected at least one hash function"}
+    }
+    constructor(n: Int, random: Random = Random()): this((0 until n).map { HashFunction create random }) {
         require(n > 0) { "Signature size should be positive" }
     }
 
-    private val hashFunctions = (0 until n).map { HashFunction create r }
-
     fun signature(values: IntArray): IntArray {
-        val sig = IntArray(n) { Int.MAX_VALUE }
+        val sig = IntArray(hashFunctions.size) { Int.MAX_VALUE }
         values.forEach { value ->
             sig.forEachIndexed { si, sval ->
                 sig[si] = min(sval, hashFunctions[si][value])
